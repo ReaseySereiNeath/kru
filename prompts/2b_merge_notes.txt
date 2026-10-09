@@ -1,0 +1,16 @@
+Book title: {book_title}
+Book type: {book_type}
+Notes for parts {first_part} to {last_part} of the book, in order:
+<notes>
+{notes_batch}
+</notes>
+
+Combine these notes into one shorter set of notes covering this whole section
+of the book. Keep it under {max_words} words.
+- Keep the order of events or ideas.
+- FICTION: keep all major events, character changes, and twists. Drop minor
+  details.
+- LEARNING: keep every key concept with its one-line explanation, and at most
+  two of the most useful code snippets.
+- Keep the list of important characters or terms.
+- Do not add anything that is not in the notes.

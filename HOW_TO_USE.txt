@@ -1,0 +1,12 @@
+KRU - HOW TO USE THESE FILES
+
+1. Create an empty project folder, e.g. "kru".
+2. Copy the "prompts" folder and AGENT_PROMPT.md into it.
+3. Open your AI coding agent inside that folder.
+4. Paste the content of AGENT_PROMPT.md as your first message
+   (or tell the agent: "Read AGENT_PROMPT.md and follow it").
+5. The agent works one phase at a time. Test each phase, commit to Git,
+   then tell the agent to continue.
+
+Tip: Phase 3 matters most. Test 3-5 real books (a novel, a coding book,
+a short one, a long one) and improve the prompts before building the UI.

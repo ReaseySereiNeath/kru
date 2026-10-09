@@ -1,0 +1,36 @@
+Book title: {book_title}
+Book type: {book_type}
+Subject: {subject}
+Chunk {chunk_number} of {total_chunks}
+Chapter(s) in this chunk: {chapter_titles}
+Note: {chunk_position_note}
+
+Context from previous chunks:
+{previous_carryover}
+
+<book_text>
+{chunk_text}
+</book_text>
+
+Write notes for this chunk only. Keep the whole response under {max_words} words.
+If the chunk covers several chapters, give each chapter its own short summary.
+If this is only part of a chapter, summarize just this part.
+
+## Summary
+3-5 sentences on what happens or what is taught.
+
+## Key points
+- FICTION: key events, decisions, twists, and character changes.
+- LEARNING: each new concept in one line, plus why it matters.
+  For code: describe what it does in one sentence and include at most one
+  minimal snippet (under 10 lines) showing the core idea.
+
+## New characters / terms
+Name - one-line description. (Skip if none.)
+
+## Visual (optional)
+Only if it clearly helps (a process, structure, or relationship).
+
+## Carryover
+Under 80 words: what the next chunk needs to know (open plot threads, where
+main characters are now, or concepts later chapters build on).

@@ -1,0 +1,71 @@
+Book title: {book_title}
+Author: {author}
+Book type: {book_type}
+Subject: {subject}
+Book length: about {page_count} pages
+Reader level: {reader_level}
+
+Notes for every part of the book, in order:
+<chapter_notes>
+{all_chunk_notes}
+</chapter_notes>
+
+Using only these notes, create the final summary.
+
+LENGTH GUIDE (scale to the book):
+- Under 200 pages: about 800-1,200 words total.
+- 200-500 pages: about 1,200-2,000 words total.
+Diagram and code blocks do not count toward the word limit.
+
+=== IF FICTION ===
+## In one sentence
+The whole story in one sentence.
+
+## The full story
+Beginning, middle, and end in 3-4 short paragraphs (include the ending).
+
+## Main characters
+Name - who they are, what they want, how they change. (Max 8.)
+
+## Character map
+A Mermaid graph of how the main characters are related
+(family, friends, enemies, love interests).
+
+## Plot timeline
+A Mermaid timeline of the 6-10 most important events.
+
+## Themes and meaning
+3-5 bullets on what the book is really about.
+
+## Chapter quick view
+One line per chapter. For books with more than 30 chapters, group them
+(e.g. "Chapters 1-4: ...").
+
+=== IF LEARNING ===
+## The core idea
+What this book teaches, in one or two sentences.
+
+## Key concepts
+Choose the 5-8 most important concepts (up to 10 for books over 400 pages).
+For each:
+- **What it is:** plain explanation (2-3 sentences)
+- **Analogy:** a simple real-world comparison
+- **Example:** a short example from the book; for coding books, a minimal
+  snippet (under 15 lines) with a one-line explanation
+- **Why it matters:** one sentence
+
+## Concept map
+A Mermaid mindmap showing how the key concepts connect.
+
+## How it works step by step
+A Mermaid flowchart of the main process or workflow the book teaches
+(skip this section if the book does not teach a process).
+
+## Practical takeaways
+5 actionable things the reader can do or apply right away.
+
+## What to read in full
+2-3 chapters worth reading fully for a deeper understanding, and why.
+
+## Quick self-check
+3 short questions with answers to test understanding.

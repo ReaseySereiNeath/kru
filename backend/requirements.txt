@@ -1,0 +1,9 @@
+# More packages are added in later phases.
+openai>=3.26,<4       # talks to Ollama (and OpenRouter) via the OpenAI-compatible API
+python-dotenv>=1.0  # loads backend/.env
+
+# Phase 2: reading books
+pymupdf>=1.24       # PDF text and bookmarks
+ebooklib>=0.18      # EPUB files
+beautifulsoup4>=4.12  # turns EPUB pages (HTML) into plain text
+pytest>=8.0

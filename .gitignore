@@ -1,0 +1,25 @@
+# Secrets
+.env
+.env.local
+.env.*.local
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node / Next.js
+node_modules/
+.next/
+
+# macOS
+.DS_Store
+
+# Your test books (may be copyrighted; keep them out of git)
+books/
+
+# Sample books built by `python -m tests.samples.make_samples`
+backend/tests/samples/*.pdf
+backend/tests/samples/*.epub
+backend/tests/samples/*.txt

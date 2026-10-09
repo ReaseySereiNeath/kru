@@ -1,0 +1,26 @@
+Below is the table of contents and the opening pages of a book.
+
+Book title: {book_title}
+Author: {author}
+Total word count: {word_count}
+
+<toc>
+{table_of_contents}
+</toc>
+
+<opening_pages>
+{first_pages_text}
+</opening_pages>
+
+Return ONLY valid JSON, no other text:
+{
+  "book_type": "fiction" or "learning",
+  "subject": "short label, e.g. 'fantasy novel', 'Python programming', 'personal finance'",
+  "reader_level": "beginner" or "intermediate" or "advanced",
+  "chapters": [
+    {"number": 1, "title": "..."}
+  ],
+  "skip_sections": ["non-content sections to skip, e.g. 'Copyright', 'Index', 'Acknowledgments'"]
+}
+
+If there is no table of contents, return an empty "chapters" list.
