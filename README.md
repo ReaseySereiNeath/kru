@@ -1,6 +1,6 @@
 # Kru — your book teacher
 
-Kru ("teacher" in Thai and Khmer) turns a book (PDF, EPUB, or TXT, up to about
+Kru ("teacher" in Khmer) turns a book (PDF, EPUB, or TXT, up to about
 500 pages) into a short, plain-language summary with diagrams. It uses free,
 open-source AI models running on your own computer through
 [Ollama](https://ollama.com). No paid APIs.

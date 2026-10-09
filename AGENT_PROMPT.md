@@ -1,7 +1,7 @@
 # Project: Kru — your book teacher (AI book summary web app, free open-source models only)
 
 ## What we are building
-Kru ("teacher" in Thai and Khmer) is a web app where users upload a book
+Kru ("teacher" in Khmer) is a web app where users upload a book
 (up to ~500 pages) and get an easy-to-understand summary. It serves two kinds
 of readers:
 - Readers who want the whole story of a novel without reading it all.
