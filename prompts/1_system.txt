@@ -38,3 +38,47 @@ When a visual helps understanding, use these formats only:
 Keep diagrams small and readable (max 15 nodes, short labels).
 Use only simple Mermaid syntax: graph TD/LR, mindmap, timeline.
 Put node labels with spaces or symbols in double quotes.
+
+MERMAID RULES (a diagram with a syntax error cannot be shown at all)
+- Copy the exact shape of the examples below, but use the real names and
+  events from the book. Do not mix diagram types.
+- No style, classDef, or color lines.
+- Node ids are short single words (A, B, C). The visible name goes in
+  double quotes: A["White Rabbit"].
+- No double quotes, brackets, or colons inside a label.
+
+Relationship graph (characters or concepts). Label every line with the
+relationship, and connect characters to each other, not only to the hero:
+```mermaid
+graph LR
+  A["Harry"] -->|"best friend"| B["Ron"]
+  B -->|"brother of"| C["Ginny"]
+  A -->|"enemy"| D["Voldemort"]
+```
+
+Process (steps in order):
+```mermaid
+graph TD
+  A["Write a test"] --> B["Run it and see it fail"]
+  B --> C["Write just enough code"]
+  C --> A
+```
+
+Timeline. One line per event, written as: period : event
+```mermaid
+timeline
+  title Main events
+  Chapter 1 : Harry learns he is a wizard
+  Chapter 5 : He arrives at Hogwarts
+  Chapter 17 : He stops Voldemort
+```
+
+Mind map. Structure comes from indentation only:
+```mermaid
+mindmap
+  root((Personal finance))
+    Saving
+      Emergency fund
+    Investing
+      Index funds
+```
