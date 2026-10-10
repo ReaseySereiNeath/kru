@@ -97,8 +97,17 @@ def test_position_note():
 
 def test_render_blocks():
     blocks = [NoteBlock(1, 1, ["Ch 1"], "one"),
-              NoteBlock(2, 4, ["Ch 2 (part 1 of 2)", "Ch 2 (part 2 of 2)", "Ch 3"], "two")]
-    assert render_blocks(blocks) == "### Part 1 (Ch 1)\n\none\n\n### Parts 2-4 (Ch 2, Ch 3)\n\ntwo"
+              NoteBlock(2, 4, ["Ch 2 (part 1 of 2)", "Ch 2 (part 2 of 2)", "Ch 3"], "two"),
+              NoteBlock(5, 5, [], "three"),
+              NoteBlock(6, 7, [], "four"),
+              NoteBlock(8, 12, [f"Ch {i}" for i in range(8, 13)], "five")]
+    assert render_blocks(blocks) == (
+        "### Covers: Ch 1\n\none\n\n"
+        "### Covers: Ch 2; Ch 3\n\ntwo\n\n"
+        "### Section 5\n\nthree\n\n"
+        "### Sections 6-7\n\nfour\n\n"
+        "### Covers: Ch 8 to Ch 12\n\nfive"
+    )
 
 
 def test_merge_batches_fit_and_keep_order(cfg):
@@ -161,7 +170,8 @@ def test_full_run(cfg, samples, tmp_path):
     # The final prompt: fiction half only, notes without carryover sections.
     final = server.user_messages()[-1]
     assert "## The full story" in final and "## Key concepts" not in final
-    assert "### Part 1 (Chapter 1: The Storm)" in final
+    assert "### Covers: Chapter 1: The Storm\n" in final
+    assert "### Part" not in final  # no chunk numbers the model could mistake for chapters
     assert "Notes for chunk 4." in final and "Carry from" not in final
     # Progress went through every step, ending at done.
     assert [p.status for p in progress][0] == "extracting"
@@ -234,7 +244,7 @@ def test_notes_are_merged_when_too_long_for_final_prompt(cfg, samples, tmp_path)
         assert int(last) > int(first)
     assert any(p.status == "merging" for p in progress)
     final = server.user_messages()[-1]
-    assert "### Parts " in final
+    assert "Merged." in final  # the final prompt has the merged notes
     # The final prompt fits its budget (the client would have refused it otherwise).
     assert estimate_tokens(final) <= cfg.prompt_budget(final=True)
 

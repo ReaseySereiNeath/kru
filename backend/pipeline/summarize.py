@@ -70,12 +70,14 @@ class NoteBlock:
     text: str = ""
 
     def render(self) -> str:
-        if self.first == self.last:
-            header = f"### Part {self.first}"
-        else:
-            header = f"### Parts {self.first}-{self.last}"
+        # Name the chapters, not our chunk numbers: a header like "Part 4"
+        # made the model write "Chapter 4" for what was really chapter 8.
         if self.titles:
-            header += f" ({_short_titles(self.titles)})"
+            header = f"### Covers: {_short_titles(self.titles)}"
+        elif self.first == self.last:
+            header = f"### Section {self.first}"
+        else:
+            header = f"### Sections {self.first}-{self.last}"
         return f"{header}\n\n{self.text}"
 
 
@@ -368,12 +370,16 @@ def final_prompt(book: ExtractedBook, check: BookCheck, blocks: list[NoteBlock])
 
 
 def _short_titles(titles: list[str]) -> str:
-    """'Ch 2 (part 1 of 3)', 'Ch 2 (part 2 of 3)', 'Ch 3' -> 'Ch 2, Ch 3'."""
+    """'Ch 2 (part 1 of 3)', 'Ch 2 (part 2 of 3)', 'Ch 3' -> 'Ch 2; Ch 3'.
+
+    Many titles (merged notes) become 'first to last'. A semicolon separates
+    titles because titles themselves often contain commas.
+    """
     unique = []
     for title in titles:
         title = re.sub(r" \(part \d+ of \d+\)$", "", title)
         if title not in unique:
             unique.append(title)
     if len(unique) > 4:
-        return f"{unique[0]} ... {unique[-1]}"
-    return ", ".join(unique)
+        return f"{unique[0]} to {unique[-1]}"
+    return "; ".join(unique)
