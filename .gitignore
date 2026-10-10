@@ -23,3 +23,6 @@ books/
 backend/tests/samples/*.pdf
 backend/tests/samples/*.epub
 backend/tests/samples/*.txt
+
+# Pipeline progress and summaries from `python -m pipeline.run`
+backend/runs/

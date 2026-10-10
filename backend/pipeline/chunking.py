@@ -257,3 +257,34 @@ def split_long_paragraphs(paragraphs: list[str], max_words: int) -> list[str]:
         if current:
             out.append(" ".join(current))
     return out
+
+
+def split_oversized(chunks: list[Chunk], max_words: int) -> list[Chunk]:
+    """Split any chunk with more than max_words words into smaller chunks.
+
+    This is the context safety net: the summary step works out how many
+    words fit in the model's context, and no chunk may be bigger. With the
+    default settings it never triggers, but it does if CHUNK_TARGET_WORDS
+    is set high or LLM_CONTEXT_TOKENS low. Chunks are renumbered afterwards.
+    """
+    out: list[Chunk] = []
+    for chunk in chunks:
+        if count_words(chunk.text) <= max_words:
+            out.append(chunk)
+            continue
+        paragraphs = split_long_paragraphs(chunk.text.split("\n\n"), max_words // 2)
+        n = 2
+        while True:  # always ends: at worst every paragraph is its own part
+            parts = split_evenly(paragraphs, n)
+            if all(sum(count_words(p) for p in part) <= max_words for part in parts):
+                break
+            n += 1
+        for part in parts:
+            body = [p for p in part if not p.startswith("## ")]  # don't count our headings
+            # Every part keeps the chunk's chapter titles: we don't track
+            # which chapter each paragraph came from.
+            out.append(Chunk(0, chunk.chapter_titles, "\n\n".join(part),
+                             sum(count_words(p) for p in body)))
+    for i, chunk in enumerate(out):
+        chunk.index = i
+    return out

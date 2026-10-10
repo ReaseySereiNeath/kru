@@ -11,7 +11,7 @@ open-source AI models running on your own computer through
 |---|---|---|
 | 1 | Project setup, config, LLM check script | ✅ done |
 | 2 | Text extraction + chunking (command line) | ✅ done |
-| 3 | Full summary pipeline (command line) | — |
+| 3 | Full summary pipeline (command line) | ✅ done |
 | 4 | Supabase schema, API, background worker | — |
 | 5 | Frontend pages | — |
 | 6 | Polish, rate limits, run-everything guide | — |
@@ -184,9 +184,9 @@ Chunks:   4 (target 500 words each)
 How the splitting works:
 
 - **Chapters** come from the file itself: PDF bookmarks or the EPUB table of
-  contents. A TXT file has none, so for now it is split by paragraphs. (From
-  Phase 3, the book check will also supply chapter titles, which Kru then
-  looks for as headings in the text.)
+  contents. A TXT file has none, so `chunk_book` splits it by paragraphs.
+  (The full pipeline below also uses the chapter titles from the book
+  check, and looks for them as headings in the text.)
 - **Short chapters are combined** into one chunk. A chunk may go up to 20%
   over the target to keep a chapter whole.
 - **Long chapters are cut into equal parts** at paragraph breaks.
@@ -196,6 +196,62 @@ How the splitting works:
 Good books for testing: free public-domain EPUBs and TXTs from
 [Project Gutenberg](https://www.gutenberg.org). Put your own test books in a
 `books/` folder; it is in `.gitignore`.
+
+---
+
+## Summarize a book (command line)
+
+```bash
+cd backend
+source .venv/bin/activate
+python -m pipeline.run path/to/book.epub
+python -m pipeline.run path/to/book.pdf --restart     # forget saved progress, start again
+```
+
+It prints each step as it goes, then the summary, the time per chunk, and
+the total time and tokens. The summary is also saved as
+`backend/runs/<book name>.summary.md`.
+
+**It can take a while.** Measured with `qwen2.5:14b` on an M1 Max (32 GB):
+about 45 seconds per chunk of ~4,500 words, plus about a minute for the final
+summary. *Alice in Wonderland* (30,000 words, 6 chunks) took 6 minutes. A
+300-page book (about 27 chunks) takes about 20-25 minutes; a 500-page book
+about 35-40 minutes.
+
+**Stopping is safe.** Progress is saved after every model call, in
+`backend/runs/` (one file per book, named after the file's contents). If
+you press Ctrl+C, or the computer restarts, run the same command again and it
+continues from the last finished chunk.
+
+What happens, step by step:
+
+1. **Read** the file and check the limits (as in `chunk_book` above).
+2. **Book check** (`prompts/0_book_check.txt`): the model says whether the
+   book is fiction or a learning book, its subject and level, its chapters,
+   and sections to skip (copyright, index...). This runs once per book.
+3. **Chunk notes** (`prompts/2_chunk_summary.txt`): one call per chunk, in
+   order. Each chunk's "Carryover" section is passed to the next chunk, so
+   the model knows what happened before.
+4. **Merge** (`prompts/2b_merge_notes.txt`), only for long books: if all the
+   notes together are too long for the final prompt, groups of notes are
+   combined into shorter notes until they fit.
+5. **Final summary** (`prompts/3_final_summary.txt`): only the FICTION or
+   the LEARNING half of this prompt is sent, depending on the book check.
+
+To improve summaries, edit the files in `prompts/` and run again with
+`--restart`. Re-run `pytest` afterwards: a test checks that every
+`{placeholder}` the code fills is still in the prompt files.
+
+**Context safety.** Before every call, Kru estimates the prompt's size
+(words × 1.4 tokens) and never sends one bigger than `LLM_CONTEXT_TOKENS`
+minus the room kept for the answer. Chunks too big for that are split
+further. After the first call to each model, Kru also checks the context
+Ollama really loaded, and stops if it's smaller than `LLM_CONTEXT_TOKENS`.
+
+**Errors.** Each call is retried up to 3 times (after 2, 4, and 8 seconds;
+after 20, 40, and 80 seconds for "too many requests"). If a free daily limit
+is reached (OpenRouter), Kru stops with a message; progress is kept, so run
+it again the next day.
 
 ---
 
