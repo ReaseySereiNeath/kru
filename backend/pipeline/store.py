@@ -4,9 +4,10 @@ The pipeline saves after every step: the book check, the chunk plan, each
 chunk's notes, and the final summary. When a run starts again, it skips
 whatever is already saved.
 
-For now progress is kept in a JSON file per book (in backend/runs/). In
-Phase 4 a Supabase version with the same methods replaces it, so the
-pipeline code stays the same.
+The command-line script keeps progress in a JSON file per book (in
+backend/runs/). The background worker uses app/db_store.py instead, which
+has the same methods but saves to the database, so the pipeline code is
+the same for both.
 """
 
 import hashlib
@@ -42,7 +43,8 @@ class JsonStore:
 
     @staticmethod
     def _empty() -> dict:
-        return {"book_check": None, "plan": None, "chunks": {}, "calls": [], "summary": None}
+        return {"book": None, "book_check": None, "plan": None, "chunks": {}, "calls": [],
+                "summary": None}
 
     def _save(self) -> None:
         # Write to a temporary file, then swap it in. If the computer stops
@@ -54,6 +56,12 @@ class JsonStore:
 
     def reset(self) -> None:
         self.data = self._empty()
+        self._save()
+
+    # --- facts read from the file (title, author, size)
+    def save_book_info(self, title: str, author: str, word_count: int, page_estimate: int) -> None:
+        self.data["book"] = {"title": title, "author": author,
+                             "word_count": word_count, "page_estimate": page_estimate}
         self._save()
 
     # --- book check (runs once per book)

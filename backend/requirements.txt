@@ -7,3 +7,9 @@ pymupdf>=1.24       # PDF text and bookmarks
 ebooklib>=0.18      # EPUB files
 beautifulsoup4>=4.12  # turns EPUB pages (HTML) into plain text
 pytest>=8.0
+
+# Phase 4: API, database, worker
+fastapi>=0.115        # the web API
+uvicorn[standard]>=0.30   # runs the API
+python-multipart>=0.0.9   # lets FastAPI receive uploaded files
+supabase>=2.10        # database, logins, and file storage

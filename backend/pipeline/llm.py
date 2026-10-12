@@ -132,7 +132,10 @@ class LLMClient:
             except Exception as error:
                 wait = self._retry_wait(error, attempt)
                 if wait is None or attempt == MAX_RETRIES:
-                    raise self._friendly_error(error) from error
+                    friendly = self._friendly_error(error)
+                    if friendly is None:
+                        raise  # a bug, not a model problem: keep the original error
+                    raise friendly from error
                 log.warning(
                     "Model call failed (%s). Retry %d of %d in %d s.",
                     _describe(error), attempt + 1, MAX_RETRIES, wait,
@@ -173,7 +176,8 @@ class LLMClient:
                 return RETRY_WAIT_SECONDS * 2**attempt
         return None  # e.g. 400 bad request, 401 wrong key, 404 unknown model
 
-    def _friendly_error(self, error: Exception) -> LLMError:
+    def _friendly_error(self, error: Exception) -> LLMError | None:
+        """An error with a message for users, or None if we don't know this error."""
         if isinstance(error, APIConnectionError):
             return LLMError(
                 f"Cannot reach the AI model at {self.cfg.llm_base_url}. "
@@ -192,7 +196,7 @@ class LLMClient:
             if error.status_code == 404:
                 return LLMError("The AI model was not found. Check the model names in backend/.env.")
             return LLMError(f"The AI service returned an error: {error.status_code} {error.message}")
-        return LLMError(f"Model call failed: {error}")
+        return None
 
     def _check_context(self, model: str) -> None:
         """Once per model: make sure Ollama really loaded a big enough context.

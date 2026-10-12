@@ -12,7 +12,7 @@ open-source AI models running on your own computer through
 | 1 | Project setup, config, LLM check script | ✅ done |
 | 2 | Text extraction + chunking (command line) | ✅ done |
 | 3 | Full summary pipeline (command line) | ✅ done |
-| 4 | Supabase schema, API, background worker | — |
+| 4 | Supabase schema, API, background worker | ✅ done |
 | 5 | Frontend pages | — |
 | 6 | Polish, rate limits, run-everything guide | — |
 
@@ -26,6 +26,7 @@ kru/
 │   ├── pipeline/   Text extraction, chunking, LLM calls, prompt loading
 │   ├── worker/     Background job runner
 │   └── tests/
+├── supabase/       Database schema (migrations) and local Supabase settings
 └── frontend/       Next.js app (Phase 5)
 ```
 
@@ -252,6 +253,116 @@ Ollama really loaded, and stops if it's smaller than `LLM_CONTEXT_TOKENS`.
 after 20, 40, and 80 seconds for "too many requests"). If a free daily limit
 is reached (OpenRouter), Kru stops with a message; progress is kept, so run
 it again the next day.
+
+---
+
+## The app: database, API, and worker
+
+So far the commands above run on one book and print the result. The app
+works differently, because a summary takes too long for a web page to wait:
+
+```
+Browser ──upload──▶ API ──saves file + "queued" job──▶ Supabase (database + files)
+Browser ◀─progress─ API ◀──────reads job────────────── Supabase
+                                                          ▲
+                         Worker ──takes job, summarizes, saves progress──┘
+```
+
+- **Supabase** stores users, books, jobs, chunk notes, summaries, and the
+  uploaded files. It runs on your computer in Docker.
+- **The API** (FastAPI) only does quick things: check the login, save an
+  upload, answer "how far is my book?".
+- **The worker** is a separate program that takes one job at a time from the
+  queue and runs the same pipeline as `python -m pipeline.run`.
+
+### 1. Start Supabase (once per computer restart)
+
+You need Docker running (Docker Desktop or OrbStack) and the Supabase CLI:
+
+```bash
+brew install supabase/tap/supabase
+cd kru                    # the project folder (it contains supabase/)
+supabase start            # first time: downloads images, takes a few minutes
+```
+
+Then copy three values into `backend/.env`. This command shows them:
+
+```bash
+supabase status -o env | grep -E "^(API_URL|ANON_KEY|SERVICE_ROLE_KEY)="
+```
+
+| `supabase status` name | goes in `backend/.env` as |
+|---|---|
+| `API_URL` | `SUPABASE_URL` |
+| `ANON_KEY` | `SUPABASE_ANON_KEY` |
+| `SERVICE_ROLE_KEY` | `SUPABASE_SERVICE_ROLE_KEY` |
+
+(It also lists newer-style `PUBLISHABLE_KEY` / `SECRET_KEY`; Kru is tested
+with the three above.) The service role key can read and change everything,
+so it stays in the backend only. On a local Supabase these keys are the same
+well-known demo values for everyone; they only become real secrets if you
+later use a hosted Supabase project.
+
+Useful: **Studio** at http://127.0.0.1:54323 lets you look at the tables
+in your browser. `supabase stop` stops everything (your data is kept).
+`supabase db reset` wipes the local database and re-creates it from
+`supabase/migrations/`.
+
+### 2. Start the API and the worker (two terminals)
+
+```bash
+# Terminal 1: the API
+cd backend && source .venv/bin/activate
+uvicorn app.main:app --reload --port 8000
+
+# Terminal 2: the worker
+cd backend && source .venv/bin/activate
+python -m worker.run
+```
+
+Check: http://localhost:8000/health should show
+`{"database":"ok","llm":"ok"}`. The interactive API page is at
+http://localhost:8000/docs.
+
+If port 8000 is already used by another program, pick another
+(`--port 8001`) and remember it for the frontend's `NEXT_PUBLIC_API_URL`.
+
+### API endpoints
+
+All except `/health` need the header `Authorization: Bearer <Supabase login token>`.
+
+| Method | Path | What it does |
+|---|---|---|
+| POST | `/books` | Upload a file; creates the book and a queued job |
+| GET | `/books` | The user's books, newest first |
+| GET | `/books/{id}` | One book with job status, progress, queue position, time left |
+| GET | `/books/{id}/summary` | The final summary (Markdown) |
+| POST | `/books/{id}/retry` | Put a failed job back in the queue |
+| DELETE | `/books/{id}` | Delete the book, its file, chunks, and summary |
+| GET | `/health` | Checks the database and the model server |
+
+### How it stays safe and reliable
+
+- **Users only see their own books.** The database enforces it (Row Level
+  Security), and the API checks ownership too. From the browser, users can
+  only *read* their own rows; every change goes through the API.
+- **Two workers can't take the same job.** The worker claims a job with
+  `SELECT ... FOR UPDATE SKIP LOCKED` (the `claim_next_job` function in
+  `supabase/migrations/`).
+- **A stopped worker loses nothing.** Each chunk's notes are saved as soon
+  as they are done. When the worker starts again, it puts unfinished jobs
+  back in the queue and continues from the last finished chunk. Run only one
+  worker process; use `WORKER_CONCURRENCY` for more books at once.
+- **Uploaded files are deleted** when a book is done (or rejected as too long
+  or scanned). Only the summary is kept. After a failure the file is kept so
+  "retry" works.
+
+### Tests
+
+`pytest` runs everything. The tests in `tests/test_supabase_live.py` use
+the real local Supabase to check the security rules and the job queue; they
+are skipped automatically when Supabase isn't running, and never run against
+a non-local `SUPABASE_URL`.
 
 ---
 

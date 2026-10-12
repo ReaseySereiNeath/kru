@@ -53,10 +53,14 @@ class Settings:
     # --- Worker ---
     worker_concurrency: int
 
-    # --- Supabase (used from Phase 4) ---
+    # --- Supabase ---
     supabase_url: str
     supabase_anon_key: str
     supabase_service_role_key: str
+
+    # --- API ---
+    # The website's address. Browsers only let that site call the API (CORS).
+    frontend_origin: str
 
     def prompt_budget(self, final: bool = False) -> int:
         """Largest prompt (in tokens) we may send without risking cut-off."""
@@ -87,6 +91,7 @@ def load_settings() -> Settings:
         supabase_url=os.getenv("SUPABASE_URL", ""),
         supabase_anon_key=os.getenv("SUPABASE_ANON_KEY", ""),
         supabase_service_role_key=os.getenv("SUPABASE_SERVICE_ROLE_KEY", ""),
+        frontend_origin=os.getenv("FRONTEND_ORIGIN", "http://localhost:3000"),
     )
 
 

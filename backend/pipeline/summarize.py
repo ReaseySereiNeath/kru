@@ -105,6 +105,7 @@ def summarize_book(
     path = Path(path)
     check_file_size(path, cfg.max_file_mb)
     book = extract_book(path)
+    store.save_book_info(book.title, book.author, book.word_count, book.page_estimate)
     status = book_status(book, cfg.max_words)
     if status != "ok":
         raise BookRejected(status, REJECTED_MESSAGES[status].format(max_words=cfg.max_words))
