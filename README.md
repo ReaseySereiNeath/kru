@@ -13,7 +13,7 @@ open-source AI models running on your own computer through
 | 2 | Text extraction + chunking (command line) | ✅ done |
 | 3 | Full summary pipeline (command line) | ✅ done |
 | 4 | Supabase schema, API, background worker | ✅ done |
-| 5 | Frontend pages | — |
+| 5 | Frontend pages | ✅ done |
 | 6 | Polish, rate limits, run-everything guide | — |
 
 ## Project layout
@@ -27,7 +27,7 @@ kru/
 │   ├── worker/     Background job runner
 │   └── tests/
 ├── supabase/       Database schema (migrations) and local Supabase settings
-└── frontend/       Next.js app (Phase 5)
+└── frontend/       The website (Next.js)
 ```
 
 All settings live in `backend/.env` (copy it from `backend/.env.example`) and
@@ -326,6 +326,46 @@ http://localhost:8000/docs.
 
 If port 8000 is already used by another program, pick another
 (`--port 8001`) and remember it for the frontend's `NEXT_PUBLIC_API_URL`.
+
+### 3. Start the website (third terminal)
+
+You need Node.js 20 or newer.
+
+```bash
+cd frontend
+npm install                    # first time only
+cp .env.example .env.local     # first time only, then fill in the anon key:
+supabase status -o env | grep "^ANON_KEY="     # paste the value into .env.local
+npm run dev
+```
+
+Open http://localhost:3000. Create an account, upload a book, and watch it
+work. (On a local Supabase no confirmation email is sent; the account works
+right away.)
+
+`.env.local` holds only public values: the Supabase address, the anon key,
+and the API address. The service role key must never go in the frontend.
+
+If port 3000 is taken, use `npm run dev -- -p 3010` and set
+`FRONTEND_ORIGIN=http://localhost:3010` in `backend/.env` (then restart
+the API), or the browser will block the website's calls to the API.
+
+The pages:
+
+| Page | Address | What it does |
+|---|---|---|
+| Landing | `/` | What Kru does |
+| Log in | `/login` | Log in or create an account |
+| Upload | `/upload` | Drag and drop a book; checks type and size first |
+| Progress | `/books/<id>` | Asks the API every 5 seconds: place in line, progress bar, time left, retry on failure |
+| Summary | `/books/<id>/summary` | The summary with diagrams and charts, a list of sections, and a copy button |
+| Library | `/library` | Your books with status and date; delete a book |
+
+If the AI writes a diagram or chart that can't be drawn, the page shows
+"Diagram could not be displayed" in its place and the rest of the summary
+stays readable.
+
+Check the code with `npm run lint` and `npm run build`.
 
 ### API endpoints
 

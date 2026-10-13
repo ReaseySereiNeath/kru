@@ -17,7 +17,7 @@ node_modules/
 .DS_Store
 
 # Your test books (may be copyrighted; keep them out of git)
-books/
+/books/
 
 # Sample books built by `python -m tests.samples.make_samples`
 backend/tests/samples/*.pdf
@@ -26,3 +26,6 @@ backend/tests/samples/*.txt
 
 # Pipeline progress and summaries from `python -m pipeline.run`
 backend/runs/
+
+# Browser test tool output
+.playwright-mcp/

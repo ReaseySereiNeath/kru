@@ -1,0 +1,234 @@
+@import "tailwindcss";
+
+/* Kru's colours and fonts. Tailwind turns each --color-x into classes like
+   bg-x, text-x, border-x, so the whole look is defined here in one place. */
+@theme {
+  --color-paper: #f6f8f7; /* page background: cool paper white */
+  --color-sheet: #ffffff; /* cards and the book page */
+  --color-ink: #14213d; /* main text: deep ink navy */
+  --color-slate: #55607a; /* secondary text */
+  --color-faded: #9aa3b5; /* text Kru "skips" in the demo, hints */
+  --color-line: #dbe2e0; /* borders and rules */
+  --color-mark: #ffe45c; /* the highlighter */
+  --color-pen: #0f6e6a; /* teacher's pen teal: buttons and links */
+  --color-pen-dark: #0a524f;
+  --color-pen-soft: #e3f1ef;
+  --color-danger: #a8261c;
+  --color-danger-soft: #fbeceb;
+
+  --font-sans: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-literata), ui-serif, Georgia, serif;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+/* A clear outline for people using the keyboard. */
+:focus-visible {
+  outline: 3px solid var(--color-pen);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ---------------------------------------------------------- highlighter */
+
+/* A highlighter stroke behind text. It is drawn from left to right once,
+   when the page loads; --delay staggers the strokes. */
+.highlight {
+  background-image: linear-gradient(var(--color-mark), var(--color-mark));
+  background-repeat: no-repeat;
+  background-position: 0 55%;
+  background-size: 0% 78%;
+  /* Give each line of a wrapped highlight its own stroke. */
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  padding: 0 0.12em;
+  margin: 0 -0.12em;
+  border-radius: 0.2em 0.35em 0.25em 0.3em;
+  color: var(--color-ink);
+  animation: draw-highlight 0.7s cubic-bezier(0.3, 0.7, 0.2, 1) forwards;
+  animation-delay: var(--delay, 0s);
+}
+
+/* The same stroke without the animation, for marks that are always there. */
+.highlight-still {
+  background-image: linear-gradient(var(--color-mark), var(--color-mark));
+  background-repeat: no-repeat;
+  background-position: 0 60%;
+  background-size: 100% 70%;
+  padding: 0 0.12em;
+  margin: 0 -0.12em;
+  border-radius: 0.2em 0.35em 0.25em 0.3em;
+}
+
+@keyframes draw-highlight {
+  to {
+    background-size: 100% 78%;
+  }
+}
+
+/* The note that appears after the highlights are drawn. */
+.note-in {
+  opacity: 0;
+  animation: note-in 0.5s ease-out forwards;
+  animation-delay: var(--delay, 0s);
+}
+
+@keyframes note-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* People who ask for less motion get the finished picture straight away. */
+@media (prefers-reduced-motion: reduce) {
+  .highlight {
+    animation: none;
+    background-size: 100% 78%;
+  }
+  .note-in {
+    animation: none;
+    opacity: 1;
+  }
+  * {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------------------------------------------------------- the summary */
+
+/* Reading styles for the summary Markdown. Serif, generous line height,
+   and a line length of about 68 characters. */
+.summary {
+  font-family: var(--font-serif);
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  max-width: 68ch;
+}
+
+.summary h2 {
+  font-family: var(--font-sans);
+  font-size: 1.5rem;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-top: 2.75rem;
+  margin-bottom: 0.75rem;
+  /* Leave room for the sticky header when jumping to a section. */
+  scroll-margin-top: 5.5rem;
+}
+
+.summary h2:first-child {
+  margin-top: 0;
+}
+
+.summary h3 {
+  font-family: var(--font-sans);
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin-top: 1.75rem;
+  margin-bottom: 0.4rem;
+}
+
+.summary p,
+.summary ul,
+.summary ol,
+.summary blockquote,
+.summary table {
+  margin-bottom: 1.1rem;
+}
+
+.summary ul {
+  list-style: disc;
+  padding-left: 1.3rem;
+}
+
+.summary ol {
+  list-style: decimal;
+  padding-left: 1.4rem;
+}
+
+.summary li {
+  margin-bottom: 0.35rem;
+}
+
+.summary li > ul,
+.summary li > ol {
+  margin-top: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.summary strong {
+  font-weight: 700;
+}
+
+.summary a {
+  color: var(--color-pen);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.summary blockquote {
+  border-left: 3px solid var(--color-mark);
+  padding-left: 1rem;
+  color: var(--color-slate);
+}
+
+.summary code {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.875em;
+  background: var(--color-pen-soft);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+
+.summary pre {
+  background: var(--color-ink);
+  color: #eef2f6;
+  padding: 1rem 1.1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  margin-bottom: 1.25rem;
+}
+
+.summary pre code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+
+.summary table {
+  display: block;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+}
+
+.summary th,
+.summary td {
+  border: 1px solid var(--color-line);
+  padding: 0.4rem 0.7rem;
+  text-align: left;
+}
+
+.summary th {
+  background: var(--color-pen-soft);
+}
+
+/* Mermaid draws an SVG; keep it inside the column on small screens. */
+.diagram svg {
+  max-width: 100%;
+  height: auto;
+}
