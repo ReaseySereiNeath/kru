@@ -5,16 +5,45 @@ Kru ("teacher" in Khmer) turns a book (PDF, EPUB, or TXT, up to about
 open-source AI models running on your own computer through
 [Ollama](https://ollama.com). No paid APIs.
 
-## Build status
+## Run Kru (every day)
 
-| Phase | What | Status |
-|---|---|---|
-| 1 | Project setup, config, LLM check script | ✅ done |
-| 2 | Text extraction + chunking (command line) | ✅ done |
-| 3 | Full summary pipeline (command line) | ✅ done |
-| 4 | Supabase schema, API, background worker | ✅ done |
-| 5 | Frontend pages | ✅ done |
-| 6 | Polish, rate limits, run-everything guide | — |
+Once the [first-time setup](#first-time-setup-macos) is done, Kru needs four
+parts running. Each is one command, in its own terminal, from the project
+folder:
+
+```bash
+./kru db        # 1. the database (Supabase, in Docker). Stays running in the background.
+./kru api       # 2. the API                      http://localhost:8000
+./kru worker    # 3. the worker that summarizes books
+./kru web       # 4. the website                  http://localhost:3000
+```
+
+Then open **http://localhost:3000**, create an account, and upload a book.
+
+Not sure what is running? Ask:
+
+```bash
+./kru check     # shows what is set up, what is running, and how to start the rest
+./kru test      # runs all tests and code checks
+./kru stop-db   # stops the database when you are done (your data is kept)
+```
+
+Ollama (the AI model server) must be running too. If you installed it as a
+Homebrew service it starts by itself; `./kru check` tells you if it is not.
+
+To stop a part, press Ctrl+C in its terminal. Stopping the worker in the
+middle of a book is safe: it continues from the last finished part when you
+start it again.
+
+## First-time setup (macOS)
+
+Do these once, in order. The sections below explain each step.
+
+1. **Ollama and a model**: [Setup: the AI model](#setup-the-ai-model-and-the-backend), steps 1 to 3.
+2. **The backend**: steps 4 and 5 there (Python packages, `backend/.env`, and a check that the model answers).
+3. **Docker and Supabase**: [Start Supabase](#1-start-supabase-once-per-computer-restart), including the three values for `backend/.env`.
+4. **The website**: [Start the website](#3-start-the-website-third-terminal) (`npm install` and `frontend/.env.local`).
+5. Run `./kru check`. When nothing is marked `no`, start the four parts above.
 
 ## Project layout
 
@@ -35,7 +64,7 @@ are read in one place: `backend/app/config.py`.
 
 ---
 
-## Setup (macOS)
+## Setup: the AI model and the backend
 
 You need: Homebrew, **Python 3.11+**, and about 10 GB of free disk space for
 the model.
@@ -403,6 +432,93 @@ All except `/health` need the header `Authorization: Bearer <Supabase login toke
 the real local Supabase to check the security rules and the job queue; they
 are skipped automatically when Supabase isn't running, and never run against
 a non-local `SUPABASE_URL`.
+
+---
+
+## Limits
+
+| Limit | Default | Change it in `backend/.env` |
+|---|---|---|
+| Book length | 200,000 words (about 500 pages) | `MAX_WORDS` |
+| File size | 50 MB | `MAX_FILE_MB` (and `NEXT_PUBLIC_MAX_FILE_MB` in `frontend/.env.local`) |
+| Uploads per user | 3 per 24 hours | `BOOKS_PER_DAY` (0 = no limit) |
+| Books summarized at once | 1 | `WORKER_CONCURRENCY` |
+
+The daily limit counts uploads, not books in the library, so deleting a book
+does not give the upload back. An upload that is refused straight away (wrong
+file type, too big) does not count. Restart the API after changing a value.
+
+While testing on your own computer you will hit the daily limit quickly: set
+`BOOKS_PER_DAY=0`.
+
+## If something goes wrong
+
+Start with `./kru check`. It finds most of these.
+
+| What you see | Likely cause | Fix |
+|---|---|---|
+| Website: "Can't reach Kru right now" | The API is not running | `./kru api` |
+| A book stays at "You're next in line", then "Kru may be paused" | The worker is not running | `./kru worker` |
+| Progress stops moving for a long time | The worker was stopped, or the Mac went to sleep | Start the worker again; it continues where it stopped. For long books, run `caffeinate -i ./kru worker` to keep the Mac awake |
+| "Kru had to stop": cannot reach the AI model | Ollama is not running | `brew services start ollama`, then press "Try again" on the page |
+| "Kru had to stop": the model was not found | Wrong model name | Fix `LLM_MODEL_CHUNK` / `LLM_MODEL_FINAL` in `backend/.env` (`ollama list` shows the names), restart the worker |
+| "Ollama loaded ... with a ...-token context" | Ollama's context is smaller than `LLM_CONTEXT_TOKENS` | See [Context length](#3-context-length-important) |
+| Login or sign up fails with a network error | Supabase is not running | `./kru db` (Docker must be running first) |
+| `/health` shows `"database": "error..."` | Supabase is not running, or wrong values in `backend/.env` | `./kru db`, then compare with `supabase status -o env` |
+| "address already in use" when starting the API or website | Another program uses port 8000 or 3000 | Stop that program, or see the port notes in the sections above |
+| The website's calls fail, and the browser console mentions CORS | The website's address is not the one the API expects | Set `FRONTEND_ORIGIN` in `backend/.env` to the website's address, restart the API |
+| "You can upload 3 books per day" | The daily limit | Wait, or set `BOOKS_PER_DAY=0` for local testing |
+| A diagram shows "Diagram could not be displayed" | The AI wrote a diagram with a mistake in it | Nothing is broken. A bigger model makes fewer of these mistakes |
+
+The worker's terminal shows one line per model call and the full details of
+any error. That is the first place to look when a book fails.
+
+## Putting Kru online later (not done yet)
+
+Kru runs on your own computer today, and nothing here has been deployed.
+These are the options when you want other people to use it. All have a free
+starting point.
+
+**The hard part is the AI model.** The website, API, and database are easy
+to host for free. A 14-billion-parameter model is not: it needs a strong
+graphics card or an Apple Silicon Mac, and free cloud servers have neither.
+So the question for any deployment is "where does the model run?"
+
+| Option | Where things run | Cost | Good for |
+|---|---|---|---|
+| A. Your Mac as the server | Everything on your Mac, reachable through a tunnel (Cloudflare Tunnel or Tailscale Funnel) | Free | Friends and beta testers. Works only while your Mac is on |
+| B. Hosted site, model at home | Website on Vercel, database on Supabase's free cloud plan, API on a free small server (Render, Fly.io); the **worker and Ollama stay on your Mac** and pull jobs from the cloud database | Free | A real web address with the quality of your local model. Books wait while your Mac is off |
+| C. Fully hosted, free model API | Same as B, but the worker also runs on a small server and uses OpenRouter's free models | Free, with strict daily limits | Small experiments. A long book may not fit in one day's allowance |
+| D. Fully hosted, your own GPU server | A rented GPU machine runs Ollama and the worker | Paid, by the hour | Many users. This is the first option that costs money |
+
+Option B fits Kru's design best: the worker only needs to reach the database,
+so it can run anywhere, including at home.
+
+Things to do before any of these:
+
+- **Check PyMuPDF's license.** Kru reads PDFs with PyMuPDF, which is free
+  under the AGPL license. If you offer Kru to others as a web service, the
+  AGPL asks you to publish Kru's source code (or buy a commercial license).
+  The alternative is to switch to `pypdf`, which has a permissive license
+  but extracts text less well.
+- **Use a hosted Supabase project** and run the files in
+  `supabase/migrations/` on it (`supabase link`, then `supabase db push`).
+  Its keys are real secrets, unlike the local ones: keep the service role
+  key only on the server, never in the website or in git.
+- **Turn on email confirmation** in Supabase's auth settings, and set its
+  site address to your real web address. Locally it is off, so accounts work
+  right away.
+- **Set the addresses**: `FRONTEND_ORIGIN` for the API,
+  `NEXT_PUBLIC_API_URL` and the Supabase values for the website. Serve
+  everything over HTTPS.
+- **Keep the limits.** `BOOKS_PER_DAY` and `MAX_WORDS` are what stop one
+  person from keeping the worker busy all day. One local model summarizes
+  about two 300-page books per hour.
+- **Think about what users upload.** Books are usually copyrighted. Kru
+  deletes each file after summarizing and shows summaries only to the person
+  who uploaded, which helps, but a public service should have terms of use.
+- **Run the API without `--reload`** (that flag is for development), and
+  keep one worker process.
 
 ---
 

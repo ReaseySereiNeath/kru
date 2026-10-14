@@ -15,11 +15,13 @@ Every endpoint except /health needs the user's Supabase login token:
 
 import re
 import uuid
+from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Response, UploadFile
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from openai import OpenAI
 
 from app.config import settings
@@ -32,7 +34,33 @@ CONTENT_TYPES = {
     "txt": "text/plain",
 }
 
+# Room for the form wrapping around the file in an upload request.
+UPLOAD_OVERHEAD_BYTES = 1024 * 1024
+
 app = FastAPI(title="Kru API", description="Your book teacher")
+
+
+@app.middleware("http")
+async def refuse_huge_uploads(request: Request, call_next):
+    """Say no to an oversized upload before receiving it.
+
+    The browser tells us the size up front (the Content-Length header).
+    Without this check, the server would first store the whole upload, even
+    several gigabytes, and only then find out it is too big.
+    """
+    if request.method == "POST" and request.url.path == "/books":
+        limit = settings.max_file_mb * 1024 * 1024 + UPLOAD_OVERHEAD_BYTES
+        length = request.headers.get("content-length", "")
+        if length.isdigit() and int(length) > limit:
+            return JSONResponse(
+                {"detail": f"This file is too big. The limit is {settings.max_file_mb} MB."},
+                status_code=413,
+            )
+    return await call_next(request)
+
+
+# Added after the check above so that it wraps it: every answer, including
+# the "too big" one, gets the headers that let the website read it.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.frontend_origin],
@@ -110,6 +138,26 @@ def job_json(job: dict, db: Database) -> dict:
     return out
 
 
+def check_daily_limit(user_id: str, db: Database) -> None:
+    """Answer 429 (too many requests) if the user has used up today's uploads."""
+    limit = settings.books_per_day
+    if limit <= 0:
+        return
+    now = datetime.now(timezone.utc)
+    times = db.upload_times_since(user_id, (now - timedelta(hours=24)).isoformat())
+    if len(times) < limit:
+        return
+    # A new upload is allowed once fewer than `limit` uploads are younger than
+    # 24 hours. That happens when this one turns 24 hours old:
+    frees_up = datetime.fromisoformat(times[-limit]) + timedelta(hours=24)
+    minutes = max(1, round((frees_up - now).total_seconds() / 60))
+    wait = f"{minutes} minutes" if minutes < 90 else f"about {round(minutes / 60)} hours"
+    books = "1 book" if limit == 1 else f"{limit} books"
+    raise HTTPException(
+        429, f"You can upload {books} per day. You can upload again in {wait}."
+    )
+
+
 def title_from_filename(filename: str) -> str:
     title = re.sub(r"[_\-]+", " ", Path(filename).stem).strip()
     return title[:200] or "Untitled"
@@ -122,6 +170,7 @@ def title_from_filename(filename: str) -> str:
 def upload_book(file: UploadFile, user_id: str = Depends(current_user),
                 db: Database = Depends(get_db)) -> dict:
     """Upload a book. Saves the file and puts a job in the queue."""
+    check_daily_limit(user_id, db)
     filename = Path(file.filename or "").name  # .name drops any folder part
     file_type = Path(filename).suffix.lower().lstrip(".")
     if file_type not in SUPPORTED_TYPES:
@@ -151,6 +200,7 @@ def upload_book(file: UploadFile, user_id: str = Depends(current_user),
         db.delete_file(file_path)
         db.delete_book(book_id)
         raise
+    db.log_upload(user_id)  # counts toward the daily limit, even if the book is deleted later
     return {**book_json(book), "job": job_json(job, db)}
 
 

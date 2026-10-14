@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { RequireAuth } from "@/components/auth";
 import { ApiError, uploadBook } from "@/lib/api";
+import { formatFileSize } from "@/lib/format";
 
 const MAX_MB = Number(process.env.NEXT_PUBLIC_MAX_FILE_MB ?? 50);
 const ALLOWED = ["pdf", "epub", "txt"];
@@ -82,7 +83,7 @@ function UploadForm() {
         {file ? (
           <>
             <p className="text-xl font-bold break-words">{file.name}</p>
-            <p className="mt-1 text-slate">{(file.size / (1024 * 1024)).toFixed(1)} MB</p>
+            <p className="mt-1 text-slate">{formatFileSize(file.size)}</p>
             <button
               onClick={() => input.current?.click()}
               disabled={uploading}

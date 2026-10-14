@@ -15,10 +15,12 @@ in simple language (the user is learning), no paid services, and don't change fi
 - Phase 4 (Supabase schema + RLS, FastAPI in `app/main.py`, worker `python -m worker.run`): done 2026-10-12.
   All DB access goes through `app/db.py` (`Database`); tests use `tests/fakes.py`
   (`FakeDatabase`, same methods) plus live tests against local Supabase (`tests/test_supabase_live.py`).
-- Phase 5 (website in `frontend/`): built 2026-10-13, awaiting approval. Client-side auth with
-  supabase-js (`components/auth.tsx`), all API calls in `lib/api.ts`. No frontend unit tests; verified
+- Phase 5 (website in `frontend/`): done 2026-10-13. Client-side auth with supabase-js
+  (`components/auth.tsx`), all API calls in `lib/api.ts`. No frontend unit tests; verified
   with lint, build, and a real browser run.
-- Next: Phase 6 (polish, rate limits, run-everything guide, deployment notes).
+- Phase 6 (polish, daily upload limit `BOOKS_PER_DAY` via the `uploads` table, `./kru` run script,
+  README quick start / troubleshooting / deployment notes): built 2026-10-13, awaiting approval.
+- All six planned phases are built. Nothing is deployed (the plan says not to).
 - The user makes git commits themselves after testing each phase. Never add a Claude co-author line.
 
 ## Decisions already approved (don't ask again)

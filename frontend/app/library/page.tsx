@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { RequireAuth } from "@/components/auth";
+import { LibrarySkeleton } from "@/components/skeleton";
 import { StatusBadge } from "@/components/status-badge";
 import { ApiError, type Book, deleteBook, listBooks } from "@/lib/api";
 import { formatDate, isInProgress } from "@/lib/format";
@@ -73,7 +74,7 @@ function Library() {
         </p>
       )}
 
-      {books === null && !error && <p className="mt-10 text-slate">Loading your books…</p>}
+      {books === null && !error && <LibrarySkeleton />}
 
       {books?.length === 0 && (
         <div className="mt-10 rounded-xl border border-line bg-sheet px-6 py-12 text-center">

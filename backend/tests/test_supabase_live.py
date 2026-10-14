@@ -131,6 +131,27 @@ def test_file_storage(db, users):
         db.download_file(path)
 
 
+def test_upload_log(db, users):
+    anna, ben = users
+    db.log_upload(anna.id)
+    db.log_upload(anna.id)
+    db.log_upload(ben.id)
+    times = db.upload_times_since(anna.id, "2000-01-01T00:00:00+00:00")
+    assert len(times) == 2 and times == sorted(times)
+    assert db.upload_times_since(anna.id, "2999-01-01T00:00:00+00:00") == []
+    # Users can't read or clear the log themselves.
+    try:
+        rows = anna.client.table("uploads").select("*").execute().data
+    except Exception:
+        rows = []
+    assert rows == []
+    try:
+        anna.client.table("uploads").delete().eq("user_id", anna.id).execute()
+    except Exception:
+        pass
+    assert len(db.upload_times_since(anna.id, "2000-01-01T00:00:00+00:00")) == 2
+
+
 def test_job_status_must_be_a_known_one(db, users):
     book = new_book(db, users[0])
     with pytest.raises(Exception):

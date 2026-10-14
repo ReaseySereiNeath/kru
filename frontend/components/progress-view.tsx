@@ -5,8 +5,15 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ApiError, type BookWithJob, getBook, retryBook } from "@/lib/api";
 import { formatTimeLeft, isInProgress, progressPercent } from "@/lib/format";
+import { ProgressSkeleton } from "./skeleton";
 
 const POLL_MS = 5000;
+// The worker picks up a waiting book within a few seconds. If the first book
+// in line still hasn't started after this long, the worker is probably off.
+const QUEUE_STALL_MS = 60_000;
+// One part normally takes about a minute. No news for this long means the
+// worker has probably stopped mid-book.
+const WORK_STALL_MS = 20 * 60_000;
 
 // The steps shown under the progress bar, with the statuses each one covers.
 const STEPS = [
@@ -19,6 +26,7 @@ export function ProgressView() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [book, setBook] = useState<BookWithJob | null>(null);
+  const [checkedAt, setCheckedAt] = useState(0); // when we last heard from the API
   const [notFound, setNotFound] = useState(false);
   const [offline, setOffline] = useState(false); // the API didn't answer
   const [retrying, setRetrying] = useState(false);
@@ -38,6 +46,7 @@ export function ProgressView() {
         const latest = await getBook(id);
         if (stopped) return;
         setBook(latest);
+        setCheckedAt(Date.now());
         setOffline(false);
       } catch (e) {
         if (stopped) return;
@@ -86,9 +95,10 @@ export function ProgressView() {
   }
 
   if (!book || !book.job) {
+    if (!offline) return <ProgressSkeleton />;
     return (
-      <Shell title="Loading…">
-        {offline && <OfflineNote />}
+      <Shell title="Can’t reach Kru">
+        <OfflineNote />
       </Shell>
     );
   }
@@ -151,6 +161,11 @@ export function ProgressView() {
   const percent = progressPercent(job.status, job.progress_current, job.progress_total);
   const queued = job.status === "queued";
   const activeStep = STEPS.findIndex((step) => step.statuses.includes(job.status));
+  // How long since the job last changed (it changes whenever progress is saved).
+  const quietFor = checkedAt - new Date(job.updated_at).getTime();
+  const stalled = queued
+    ? job.queue_position === 1 && quietFor > QUEUE_STALL_MS
+    : quietFor > WORK_STALL_MS;
 
   return (
     <Shell
@@ -161,7 +176,9 @@ export function ProgressView() {
         {queued
           ? job.queue_position === 1
             ? "You’re next in line"
-            : `Waiting in line: number ${job.queue_position}`
+            : `Waiting in line: ${(job.queue_position ?? 2) - 1} ${
+                job.queue_position === 2 ? "book" : "books"
+              } ahead of yours`
           : job.progress_message || "Working on it"}
       </p>
 
@@ -181,7 +198,9 @@ export function ProgressView() {
 
       <p className="mt-3 min-h-6 text-slate">
         {queued
-          ? "Books are summarized one at a time. Yours starts when the ones before it finish."
+          ? job.queue_position === 1
+            ? "Kru starts on your book in a moment."
+            : "Books are summarized one at a time. Yours starts when the ones before it finish."
           : job.eta_seconds !== null
             ? `${formatTimeLeft(job.eta_seconds)} left`
             : "Working out how long this will take…"}
@@ -217,6 +236,13 @@ export function ProgressView() {
       </ol>
 
       {offline && <OfflineNote />}
+      {stalled && !offline && (
+        <p role="status" className="mt-6 rounded-lg bg-mark/50 px-4 py-3">
+          {queued
+            ? "This is taking longer than usual to start. Kru may be paused right now. Your book keeps its place in line."
+            : "No progress for a while. Kru may be paused right now. It continues from where it stopped, so nothing is lost."}
+        </p>
+      )}
 
       <p className="mt-10 font-serif text-slate">
         You can close this page. The summary will be waiting in{" "}

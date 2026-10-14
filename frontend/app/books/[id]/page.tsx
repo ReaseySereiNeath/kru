@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { RequireAuth } from "@/components/auth";
+import { ProgressSkeleton } from "@/components/skeleton";
 import { ProgressView } from "@/components/progress-view";
 
 // The page itself lives in the components/ folder: Tailwind does not pick up
@@ -10,7 +11,7 @@ export const metadata = { title: "Progress" };
 // id when it builds the page, so it needs a <Suspense> around it.
 export default function ProgressPage() {
   return (
-    <Suspense fallback={<p className="py-16 text-center text-slate">Loading…</p>}>
+    <Suspense fallback={<ProgressSkeleton />}>
       <RequireAuth>
         <ProgressView />
       </RequireAuth>

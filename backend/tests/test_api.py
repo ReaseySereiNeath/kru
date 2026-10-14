@@ -1,4 +1,5 @@
 from dataclasses import replace
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
@@ -17,6 +18,12 @@ def db():
     fake = FakeDatabase()
     fake.tokens = {"anna-token": "anna", "ben-token": "ben"}
     return fake
+
+
+@pytest.fixture(autouse=True)
+def default_settings(monkeypatch):
+    """The plan's defaults, whatever is in the developer's .env."""
+    monkeypatch.setattr(main, "settings", replace(settings, books_per_day=3, max_file_mb=50))
 
 
 @pytest.fixture
@@ -64,6 +71,69 @@ def test_queue_position_counts_books_ahead(client):
     second = upload(client, BEN).json()
     assert second["job"]["queue_position"] == 2
     assert client.get(f"/books/{first['id']}", headers=ANNA).json()["job"]["queue_position"] == 1
+
+
+def test_queue_position_counts_the_book_being_summarized(client, db):
+    first = upload(client).json()
+    second = upload(client, BEN).json()
+    db.claim_next_job()  # the worker starts on the first book
+    position = client.get(f"/books/{second['id']}", headers=BEN).json()["job"]["queue_position"]
+    assert position == 2  # still one book ahead: the one in progress
+    assert client.get(f"/books/{first['id']}", headers=ANNA).json()["job"]["queue_position"] is None
+
+
+# ---------------------------------------------------------------- daily limit
+
+
+def test_daily_limit(client, db):
+    for _ in range(3):
+        assert upload(client).status_code == 201
+    response = upload(client)
+    assert response.status_code == 429
+    assert "3 books per day" in response.json()["detail"]
+    assert "about 24 hours" in response.json()["detail"]
+    assert len(db.books) == 3 and len(db.files) == 3  # the 4th was not stored
+    # Other users are not affected.
+    assert upload(client, BEN).status_code == 201
+
+
+def test_deleting_a_book_does_not_give_the_upload_back(client):
+    ids = [upload(client).json()["id"] for _ in range(3)]
+    client.delete(f"/books/{ids[0]}", headers=ANNA)
+    assert upload(client).status_code == 429
+
+
+def test_daily_limit_frees_up_after_24_hours(client, db):
+    now = datetime.now(timezone.utc)
+    hours_ago = lambda h: (now - timedelta(hours=h)).isoformat()
+    db.log_upload("anna", hours_ago(30))  # too old to count
+    db.log_upload("anna", hours_ago(23))
+    db.log_upload("anna", hours_ago(10))
+    assert upload(client).status_code == 201  # only 2 in the last 24 hours
+    response = upload(client)                 # now 3: 23 h, 10 h, and just now
+    assert response.status_code == 429
+    assert "in 60 minutes" in response.json()["detail"]  # when the 23-hour-old one expires
+
+
+def test_failed_uploads_do_not_count(client):
+    for _ in range(5):
+        assert upload(client, name="notes.docx").status_code == 400
+    assert upload(client).status_code == 201
+
+
+def test_daily_limit_can_be_turned_off(client, monkeypatch):
+    monkeypatch.setattr(main, "settings", replace(settings, books_per_day=0))
+    for _ in range(5):
+        assert upload(client).status_code == 201
+
+
+def test_huge_upload_is_refused_from_its_declared_size(client, db, monkeypatch):
+    monkeypatch.setattr(main, "settings", replace(settings, max_file_mb=1))
+    # 3 MB declared: refused by the size check before the endpoint runs.
+    response = upload(client, data=b"x" * (3 * 1024 * 1024))
+    assert response.status_code == 413
+    assert "limit is 1 MB" in response.json()["detail"]
+    assert db.books == {} and db.uploads == []
 
 
 @pytest.mark.parametrize("name", ["book.docx", "book", "book.pdf.exe"])

@@ -82,6 +82,11 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new ApiError(0, UNREACHABLE);
   }
 
+  if (response.status === 401) {
+    // The login is no longer valid (it expired, or the account is gone).
+    // Logging out here makes <RequireAuth> send the user to the login page.
+    await getSupabase().auth.signOut();
+  }
   if (!response.ok) {
     // The API sends errors as {"detail": "a message for the user"}.
     const body = await response.json().catch(() => null);

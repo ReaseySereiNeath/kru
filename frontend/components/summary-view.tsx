@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { SummarySkeleton } from "@/components/skeleton";
 import { SummaryMarkdown } from "@/components/summary-markdown";
 import { ApiError, type Summary, getSummary } from "@/lib/api";
 import { extractHeadings, formatDate, type Heading } from "@/lib/format";
@@ -62,7 +63,7 @@ export function SummaryView() {
     );
   }
 
-  if (!summary) return <p className="py-16 text-center text-slate">Loading the summary…</p>;
+  if (!summary) return <SummarySkeleton />;
 
   const { book, markdown } = summary;
   const headings = extractHeadings(markdown);

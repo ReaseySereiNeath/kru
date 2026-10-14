@@ -95,12 +95,30 @@ class Database:
         return len(rows)
 
     def queue_position(self, job: dict) -> int:
-        """1 = next in line. Counts the queued jobs that were queued earlier."""
-        ahead = (
+        """1 = next in line. Counts the books ahead: the ones being summarized
+        right now, plus the queued ones that were queued earlier."""
+        active = (
+            self.client.table("jobs").select("id", count="exact")
+            .in_("status", ACTIVE_STATUSES).execute().count
+        )
+        queued_earlier = (
             self.client.table("jobs").select("id", count="exact")
             .eq("status", "queued").lt("queued_at", job["queued_at"]).execute().count
         )
-        return (ahead or 0) + 1
+        return (active or 0) + (queued_earlier or 0) + 1
+
+    # ------------------------------------------------------------ upload log (daily limit)
+
+    def log_upload(self, user_id: str) -> None:
+        self.client.table("uploads").insert({"user_id": user_id}).execute()
+
+    def upload_times_since(self, user_id: str, since_iso: str) -> list[str]:
+        """When this user uploaded since the given time, oldest first."""
+        rows = (
+            self.client.table("uploads").select("created_at")
+            .eq("user_id", user_id).gte("created_at", since_iso).order("created_at").execute().data
+        )
+        return [row["created_at"] for row in rows]
 
     # ------------------------------------------------------------ chunks
 

@@ -61,6 +61,8 @@ class Settings:
     # --- API ---
     # The website's address. Browsers only let that site call the API (CORS).
     frontend_origin: str
+    # Uploads allowed per user per 24 hours. 0 = no limit.
+    books_per_day: int
 
     def prompt_budget(self, final: bool = False) -> int:
         """Largest prompt (in tokens) we may send without risking cut-off."""
@@ -92,6 +94,7 @@ def load_settings() -> Settings:
         supabase_anon_key=os.getenv("SUPABASE_ANON_KEY", ""),
         supabase_service_role_key=os.getenv("SUPABASE_SERVICE_ROLE_KEY", ""),
         frontend_origin=os.getenv("FRONTEND_ORIGIN", "http://localhost:3000"),
+        books_per_day=_int("BOOKS_PER_DAY", 3),
     )
 
 

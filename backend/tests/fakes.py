@@ -19,6 +19,7 @@ class FakeDatabase:
         self.summaries: dict[str, dict] = {}   # by book id
         self.files: dict[str, bytes] = {}      # by storage path
         self.tokens: dict[str, str] = {}       # login token -> user id
+        self.uploads: list[tuple[str, str]] = []  # (user id, time)
         self._clock = itertools.count(1)
 
     def _now(self) -> str:
@@ -98,8 +99,18 @@ class FakeDatabase:
         return len(stuck)
 
     def queue_position(self, job):
-        return 1 + sum(1 for j in self.jobs.values()
-                       if j["status"] == "queued" and j["queued_at"] < job["queued_at"])
+        active = sum(1 for j in self.jobs.values() if j["status"] in ACTIVE_STATUSES)
+        earlier = sum(1 for j in self.jobs.values()
+                      if j["status"] == "queued" and j["queued_at"] < job["queued_at"])
+        return active + earlier + 1
+
+    # --- upload log
+    def log_upload(self, user_id, when=None):
+        from app.db import now_iso
+        self.uploads.append((user_id, when or now_iso()))
+
+    def upload_times_since(self, user_id, since_iso):
+        return sorted(t for u, t in self.uploads if u == user_id and t >= since_iso)
 
     # --- chunks
     def get_chunks(self, book_id):

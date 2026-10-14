@@ -11,6 +11,12 @@ export function formatTimeLeft(seconds: number): string {
   return `about ${hours} h ${rest} min`;
 }
 
+/** 1536 -> "2 KB", 5_400_000 -> "5.1 MB" */
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 /** "12 Oct 2026" */
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-GB", {
