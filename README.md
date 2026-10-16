@@ -3,7 +3,8 @@
 Kru ("teacher" in Khmer) turns a book (PDF, EPUB, or TXT, up to about
 500 pages) into a short, plain-language summary with diagrams. It uses free,
 open-source AI models running on your own computer through
-[Ollama](https://ollama.com). No paid APIs.
+[Ollama](https://ollama.com), or the free tier of an online AI service if you
+choose. No paid APIs.
 
 ## Run Kru (every day)
 
@@ -433,6 +434,69 @@ the real local Supabase to check the security rules and the job queue; they
 are skipped automatically when Supabase isn't running, and never run against
 a non-local `SUPABASE_URL`.
 
+### Paid services (optional)
+
+Free stays the default. If you want better or faster summaries and are happy
+to pay per book, you can switch on a paid service. Kru refuses every paid
+service until you set `LLM_ALLOW_PAID=true`, so nothing costs money by
+accident.
+
+Two ways to pay:
+
+- **Claude** (`LLM_PROVIDER=anthropic`), through Anthropic's own connection.
+- **Any paid model on OpenRouter** (GPT, Claude, Mistral, and many more) with
+  one OpenRouter key: keep `LLM_PROVIDER=openrouter` and use a model id
+  without `:free`.
+
+**Switch to Claude:**
+
+1. Create an account at https://console.anthropic.com, add credit (prepaid),
+   and create an API key. Consider setting a monthly spending limit in the
+   console.
+2. In `backend/.env`:
+
+   ```
+   LLM_PROVIDER=anthropic
+   LLM_ALLOW_PAID=true
+   LLM_API_KEY=<your key>
+   LLM_MODEL_CHUNK=claude-haiku-5-5      # notes for each part: the cheap model is enough
+   LLM_MODEL_FINAL=claude-sonnet-5-5     # the final summary: a stronger model
+   LLM_EFFORT=                           # optional: low, medium, high (lower = cheaper)
+   ```
+
+3. Run `python -m pipeline.check_llm` (it costs a fraction of a cent), then
+   restart the API and the worker. The worker's first log line says
+   `PAID AI service` so you always know.
+4. In `frontend/.env.local`, set `NEXT_PUBLIC_AI_SERVICE=Claude`.
+
+**What a book costs.** Prices per million tokens (sent / written), from
+Anthropic's price list as of October 2026. Check
+https://www.anthropic.com/pricing for current prices.
+
+| Model | Price | A 300-page book, roughly |
+|---|---|---|
+| `claude-haiku-5-5` | $0.10 / $0.50 | a few cents |
+| `claude-sonnet-5-5` | $2 / $10 | about $0.50 to $1 |
+| `claude-opus-5-5` | $4 / $20 | about $1 to $2 |
+
+The ranges include Claude's "thinking", which is billed like the answer;
+`LLM_EFFORT=low` reduces it. Mixing models works well: Haiku for the ~30
+notes calls and Sonnet for the one final summary costs little more than
+Haiku alone. Kru asks Claude to reuse the system prompt between calls
+(prompt caching), which makes those repeated parts about ten times cheaper.
+
+Things to know about Claude:
+
+- Claude's safety checks occasionally decline a passage (violent scenes in
+  novels, for example). With Sonnet and Opus, Anthropic then retries on
+  another Claude model automatically. Haiku has no such retry: the book
+  stops with "Claude declined to work on part of this book". Try a
+  different model.
+- Your daily upload limit (`BOOKS_PER_DAY`) is also your spending limit. Keep
+  it if other people can upload.
+- The book's text is sent to Anthropic. Read Anthropic's terms for how API
+  data is handled.
+
 ---
 
 ## Limits
@@ -442,6 +506,7 @@ a non-local `SUPABASE_URL`.
 | Book length | 200,000 words (about 500 pages) | `MAX_WORDS` |
 | File size | 50 MB | `MAX_FILE_MB` (and `NEXT_PUBLIC_MAX_FILE_MB` in `frontend/.env.local`) |
 | Uploads per user | 3 per 24 hours | `BOOKS_PER_DAY` (0 = no limit) |
+| Paid AI services | refused | `LLM_ALLOW_PAID=true` allows them |
 | Books summarized at once | 1 | `WORKER_CONCURRENCY` |
 
 The daily limit counts uploads, not books in the library, so deleting a book
@@ -488,7 +553,7 @@ So the question for any deployment is "where does the model run?"
 |---|---|---|---|
 | A. Your Mac as the server | Everything on your Mac, reachable through a tunnel (Cloudflare Tunnel or Tailscale Funnel) | Free | Friends and beta testers. Works only while your Mac is on |
 | B. Hosted site, model at home | Website on Vercel, database on Supabase's free cloud plan, API on a free small server (Render, Fly.io); the **worker and Ollama stay on your Mac** and pull jobs from the cloud database | Free | A real web address with the quality of your local model. Books wait while your Mac is off |
-| C. Fully hosted, free model API | Same as B, but the worker also runs on a small server and uses OpenRouter's free models | Free, with strict daily limits | Small experiments. A long book may not fit in one day's allowance |
+| C. Fully hosted, free model API | Same as B, but the worker also runs on a small server and uses a free online AI service (see [Using an online AI service](#using-an-online-ai-service)) | Free, with strict daily limits | Small experiments. A long book may not fit in one day's allowance |
 | D. Fully hosted, your own GPU server | A rented GPU machine runs Ollama and the worker | Paid, by the hour | Many users. This is the first option that costs money |
 
 Option B fits Kru's design best: the worker only needs to reach the database,
@@ -522,12 +587,76 @@ Things to do before any of these:
 
 ---
 
-## Optional: OpenRouter free models
+## Using an online AI service
 
-Instead of Ollama you can use OpenRouter's free models (IDs ending in `:free`).
-Change only `backend/.env`: see the commented OpenRouter lines in
-`.env.example`.
+By default the AI runs on your own computer with Ollama. Instead, Kru can use
+the free tier of an online AI service, or (only if you switch it on) a paid
+service such as Claude. This is useful when your computer is
+too slow for a good model, or when you want better summaries than a local
+model gives. You choose one service for the whole app in `backend/.env`.
 
-Be aware: free models have strict daily request limits. A 500-page book needs
-about 55 model calls, which may be more than one day's allowance. Check
-OpenRouter's current limits before relying on it.
+| `LLM_PROVIDER` | Service | Get a free key | Free models |
+|---|---|---|---|
+| `ollama` (default) | Your own computer | none needed | any model you `ollama pull` |
+| `openrouter` | [OpenRouter](https://openrouter.ai) | openrouter.ai → Keys | only ids ending in `:free` (Kru refuses the others) |
+| `groq` | [Groq](https://console.groq.com) | console.groq.com → API Keys | the models on a free account |
+| `gemini` | Google Gemini | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | the models on the free tier |
+| `anthropic` | Claude, **paid** | [console.anthropic.com](https://console.anthropic.com) | none: see [Paid services](#paid-services-optional) |
+| `custom` | Any other OpenAI-compatible server (e.g. LM Studio) | depends | set `LLM_BASE_URL` too |
+
+### Switch to an online service
+
+1. Create a free account and an API key on the service's website.
+2. In `backend/.env`, set three things (example for Gemini):
+
+   ```
+   LLM_PROVIDER=gemini
+   LLM_API_KEY=<your key>
+   LLM_MODEL_CHUNK=<model name>
+   LLM_MODEL_FINAL=<model name>
+   ```
+
+   Not sure of the model name? Put any name in and run the check below: when
+   the model isn't found, it lists the ones you can use.
+3. Check that it works:
+
+   ```bash
+   cd backend && source .venv/bin/activate
+   python -m pipeline.check_llm
+   ```
+
+   It should end with `All checks passed.` If it says the key was not
+   accepted, copy the key again (without spaces).
+4. Restart the API and the worker (`./kru api`, `./kru worker`).
+5. Tell the website which service it is, so visitors know where their book
+   goes: in `frontend/.env.local` set `NEXT_PUBLIC_AI_SERVICE=Google Gemini`
+   (the service's name), then restart the website.
+
+To go back to your own computer: `LLM_PROVIDER=ollama`,
+`LLM_API_KEY=ollama`, and your Ollama model names; empty
+`NEXT_PUBLIC_AI_SERVICE`.
+
+### Things to know before you switch
+
+- **Your book's text leaves your computer.** Kru sends every part of the
+  book to the service. Free tiers may keep what you send, and some use it to
+  improve their models (Google says so for Gemini's free tier, for example).
+  Read the service's terms before using books that are private or that
+  belong to someone else. With Ollama, nothing leaves your computer.
+- **Free tiers have limits per minute and per day.** Kru waits and retries
+  when it hits a per-minute limit. When a daily limit is reached, the book
+  stops with "The free daily limit of ... has been reached" and keeps its
+  progress: press "Try again" the next day and it continues where it stopped.
+  A 300-page book needs about 30 model calls.
+- **Some free tiers limit how big one request can be.** If you see "one
+  request is too large for its free tier", lower `CHUNK_TARGET_WORDS` (for
+  example to 2500) and `LLM_CONTEXT_TOKENS` (for example to 8192).
+- **Kru never uses paid models unless you allow it.** Without
+  `LLM_ALLOW_PAID=true` it stops with a message instead of calling Claude or
+  a paid OpenRouter model. Groq and Gemini are free as long as your account
+  has no billing set up: don't add a payment method to the account you use
+  for Kru.
+- **Free model lists change often.** If a model disappears, the check above
+  lists the current ones.
+- Online models are usually much faster than a local one, so a book can
+  finish in a few minutes, rate limits permitting.

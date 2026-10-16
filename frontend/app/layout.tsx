@@ -31,8 +31,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <main className="flex-1">{children}</main>
           <footer className="border-t border-line">
             <p className="mx-auto max-w-5xl px-5 py-6 text-sm text-slate">
-              Kru means “teacher” in Khmer. Summaries are written by an open-source AI model and
-              can contain mistakes.
+              Kru means “teacher” in Khmer. Summaries are written by an AI model and can contain
+              mistakes.
             </p>
           </footer>
         </AuthProvider>

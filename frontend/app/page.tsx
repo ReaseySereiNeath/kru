@@ -1,5 +1,9 @@
 import Link from "next/link";
 
+// The online AI service in use, if any (set in frontend/.env.local).
+// Empty means the AI runs on Kru's own computer.
+const AI_SERVICE = process.env.NEXT_PUBLIC_AI_SERVICE?.trim() || null;
+
 // A highlighted phrase in the demo. `delay` staggers the strokes so they are
 // drawn one after another, like a reader going down the page.
 function Mark({ delay, children }: { delay: number; children: React.ReactNode }) {
@@ -161,11 +165,24 @@ export default function LandingPage() {
               </dd>
             </div>
             <div>
-              <dt className="font-sans font-bold">It runs on open-source AI</dt>
-              <dd className="mt-1 leading-relaxed text-slate">
-                No paid AI service is involved. That also means it is slower than a chatbot: books
-                are summarized one at a time, so you may wait in line.
-              </dd>
+              {AI_SERVICE ? (
+                <>
+                  <dt className="font-sans font-bold">The summaries are written by {AI_SERVICE}</dt>
+                  <dd className="mt-1 leading-relaxed text-slate">
+                    To write a summary, Kru sends the book’s text to {AI_SERVICE}, an online AI
+                    service. Books are summarized one at a time, so you may wait in line.
+                  </dd>
+                </>
+              ) : (
+                <>
+                  <dt className="font-sans font-bold">The AI runs on Kru’s own computer</dt>
+                  <dd className="mt-1 leading-relaxed text-slate">
+                    Your book is not sent to any AI company. Kru uses a free, open-source AI model,
+                    which is slower than a chatbot: books are summarized one at a time, so you may
+                    wait in line.
+                  </dd>
+                </>
+              )}
             </div>
             <div>
               <dt className="font-sans font-bold">Scanned books don’t work yet</dt>

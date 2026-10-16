@@ -119,6 +119,13 @@ def main() -> None:
     for noisy in ("httpx", "httpx2"):  # one log line per HTTP request is too much
         logging.getLogger(noisy).setLevel(logging.WARNING)
 
+    log.info("AI service: %s, models %s / %s", settings.llm_provider_name,
+             settings.llm_model_chunk, settings.llm_model_final)
+    if settings.cost_problem():
+        log.warning("Books will fail: %s", settings.cost_problem())
+    elif settings.llm_is_paid:
+        log.warning("PAID AI service: every book summarized costs money.")
+
     requeued = Database(settings).requeue_stuck_jobs()
     if requeued:
         log.info("Put %d unfinished job(s) back in the queue", requeued)

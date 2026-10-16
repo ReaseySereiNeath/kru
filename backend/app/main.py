@@ -271,11 +271,15 @@ def health(response: Response) -> dict:
         get_db().ping()
     except Exception as error:
         result["database"] = f"error: {type(error).__name__}"
-    try:
-        OpenAI(base_url=settings.llm_base_url, api_key=settings.llm_api_key,
-               timeout=5, max_retries=0).models.list()
-    except Exception as error:
-        result["llm"] = f"error: {type(error).__name__}"
+    problem = settings.cost_problem()
+    if problem:
+        result["llm"] = f"error: {problem}"
+    else:
+        try:
+            OpenAI(base_url=settings.llm_base_url, api_key=settings.llm_api_key,
+                   timeout=5, max_retries=0).models.list()
+        except Exception as error:
+            result["llm"] = f"error: {type(error).__name__}"
     if result != {"database": "ok", "llm": "ok"}:
         response.status_code = 503
     return result

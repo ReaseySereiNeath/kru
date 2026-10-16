@@ -13,3 +13,6 @@ fastapi>=0.115        # the web API
 uvicorn[standard]>=0.30   # runs the API
 python-multipart>=0.0.9   # lets FastAPI receive uploaded files
 supabase>=2.10        # database, logins, and file storage
+
+# Optional paid service: Claude (only used when LLM_PROVIDER=anthropic and LLM_ALLOW_PAID=true)
+anthropic>=1.14,<2

@@ -19,8 +19,11 @@ in simple language (the user is learning), no paid services, and don't change fi
   (`components/auth.tsx`), all API calls in `lib/api.ts`. No frontend unit tests; verified
   with lint, build, and a real browser run.
 - Phase 6 (polish, daily upload limit `BOOKS_PER_DAY` via the `uploads` table, `./kru` run script,
-  README quick start / troubleshooting / deployment notes): built 2026-10-13, awaiting approval.
+  README quick start / troubleshooting / deployment notes): done 2026-10-13.
 - All six planned phases are built. Nothing is deployed (the plan says not to).
+- Online AI services (free tiers + opt-in paid, incl. Claude): built 2026-10-15, awaiting approval. Tested
+  against the real services only with fake keys (no real keys available); a real summary through an online
+  service is untested.
 - The user makes git commits themselves after testing each phase. Never add a Claude co-author line.
 
 ## Decisions already approved (don't ask again)
@@ -39,6 +42,15 @@ in simple language (the user is learning), no paid services, and don't change fi
   (LLM_ANSWER_RESERVE_TOKENS), 4500 for the final call (LLM_FINAL_ANSWER_RESERVE_TOKENS).
 - Fill placeholders by plain string replacement of known names, never `str.format()`.
 - Book title and author come from file metadata, falling back to the filename and "Unknown".
+- External AI (approved 2026-10-15): the app owner picks ONE service for the whole app in backend/.env
+  (`LLM_PROVIDER` = ollama | openrouter | groq | gemini | anthropic | custom). Ollama stays the default.
+  No per-user keys. Online services always use their preset address; `LLM_BASE_URL` only applies to
+  ollama and custom.
+- Paid services (approved 2026-10-15, overrides AGENT_PROMPT's "no paid APIs" for this opt-in only):
+  free stays the default; Claude (`anthropic`) and paid OpenRouter models are refused unless
+  `LLM_ALLOW_PAID=true` (enforced in `Settings.cost_problem()`, checked before every call). Claude goes
+  through the official `anthropic` package (not an OpenAI-compatible shim): system prompt cached, no
+  temperature, server-side refusal fallback for Opus/Sonnet 5.5, optional `LLM_EFFORT`.
 
 ## Environment facts (verified)
 - Use `python3.11`. Plain `python3` on this Mac is 3.8. Venv: `backend/.venv`.
