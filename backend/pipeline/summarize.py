@@ -7,7 +7,8 @@ Steps (the names match the job statuses used from Phase 4):
                 "Carryover" on to the next one
 4. merging      only if all the notes are too long for the final prompt:
                 combine groups of notes into shorter notes, until they fit
-5. finalizing   the final summary
+5. finalizing   the final summary, then Kru draws its diagrams from checked
+                data (see diagrams.py)
 
 Progress is saved in a store after every model call, so if the run stops,
 the next run continues from the last finished chunk.
@@ -22,6 +23,7 @@ from app.config import Settings, settings
 from pipeline import prompts
 from pipeline.book_check import BookCheck, run_book_check
 from pipeline.chunking import Chunk, plan_chunks, split_evenly, split_oversized
+from pipeline.diagrams import add_diagrams, strip_diagram_sections
 from pipeline.extract import ExtractedBook, book_status, check_file_size, extract_book
 from pipeline.llm import LLMClient, LLMError, LLMReply, estimate_tokens, tokens_to_words
 
@@ -153,9 +155,11 @@ def summarize_book(
         store.save_chunk_result(chunk.index, notes, carryover, reply.seconds)
         done[chunk.index] = {"notes": notes, "carryover": carryover}
 
-    # 5. Merge notes if they don't fit in the final prompt
+    # 5. Merge notes if they don't fit in the final prompt. The relationship
+    #    and event lines are left out here: the diagram step uses them.
     blocks = [
-        NoteBlock(c.index + 1, c.index + 1, c.chapter_titles, done[c.index]["notes"])
+        NoteBlock(c.index + 1, c.index + 1, c.chapter_titles,
+                  strip_diagram_sections(done[c.index]["notes"]))
         for c in chunks
     ]
     blocks = merge_until_fits(blocks, llm, store, book, check, system, cfg, on_progress)
@@ -164,9 +168,16 @@ def summarize_book(
     on_progress(Progress("finalizing", message="Writing the final summary"))
     reply = llm.chat(cfg.llm_model_final, system, final_prompt(book, check, blocks), final=True)
     _record(store, "final summary", reply)
-    store.save_summary(reply.text, reply.model)
+
+    # 7. Diagrams, drawn by Kru from data the model extracts and Kru checks
+    on_progress(Progress("finalizing", message="Drawing the diagrams"))
+    markdown = add_diagrams(
+        reply.text, llm, book, check, [done[c.index]["notes"] for c in chunks], cfg,
+        record=lambda step, diagram_reply: _record(store, step, diagram_reply),
+    )
+    store.save_summary(markdown, reply.model)
     on_progress(Progress("done", total, total, "Summary ready"))
-    return reply.text
+    return markdown
 
 
 def _record(store, step: str, reply: LLMReply) -> None:

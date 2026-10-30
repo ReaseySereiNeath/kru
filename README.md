@@ -268,6 +268,14 @@ What happens, step by step:
    combined into shorter notes until they fit.
 5. **Final summary** (`prompts/3_final_summary.txt`): only the FICTION or
    the LEARNING half of this prompt is sent, depending on the book check.
+6. **Diagrams** (`prompts/4_diagrams.txt`): Kru draws the diagrams itself.
+   While reading, each part's notes also list relationships and key events
+   with chapter numbers. Kru collects them, asks the model for plain data
+   (people and relationships, events, concepts, process steps), checks it,
+   and writes the Mermaid code. So the diagrams always draw, arrows point
+   the right way, impossible chapter numbers are dropped, and line colours
+   show the kind of relationship. If this step fails, the diagram the model
+   wrote in the summary is kept.
 
 To improve summaries, edit the files in `prompts/` and run again with
 `--restart`. Re-run `pytest` afterwards: a test checks that every

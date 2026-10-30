@@ -46,6 +46,8 @@ MERMAID RULES (a diagram with a syntax error cannot be shown at all)
 - Node ids are short single words (A, B, C). The visible name goes in
   double quotes: A["White Rabbit"].
 - No double quotes, brackets, or colons inside a label.
+- Every arrow must read as a true sentence from left to right, and use only
+  chapter numbers that appear in the notes.
 
 Relationship graph (characters or concepts). Label every line with the
 relationship, and connect characters to each other, not only to the hero:

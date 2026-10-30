@@ -256,3 +256,18 @@ def test_too_long_book_is_rejected_before_any_model_call(cfg, samples, tmp_path)
     assert info.value.status == "too_long"
     assert "1,000 words" in str(info.value)
     assert store.calls == []
+
+
+def test_diagram_lines_stay_in_saved_notes_but_not_in_the_final_prompt(cfg, samples, tmp_path):
+    class WithRelationships(FakeModel):
+        def __call__(self, request):
+            reply = super().__call__(request)
+            if "<book_text>" in request["messages"][1]["content"]:
+                reply = reply.replace("## Carryover",
+                                      "## Relationships\n- Anna - aunt of - Tom\n\n## Carryover")
+            return reply
+
+    store = JsonStore(tmp_path / "run.json")
+    _, server = run(samples["txt"], cfg, store, WithRelationships())
+    assert "aunt of" in store.chunk_results[0]["notes"]  # kept for the diagram step (and resume)
+    assert "aunt of" not in server.user_messages()[-1]    # but not sent to the final summary

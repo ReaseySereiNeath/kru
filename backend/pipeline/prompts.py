@@ -18,6 +18,7 @@ SYSTEM = "1_system.txt"
 CHUNK_SUMMARY = "2_chunk_summary.txt"
 MERGE_NOTES = "2b_merge_notes.txt"
 FINAL_SUMMARY = "3_final_summary.txt"
+DIAGRAMS = "4_diagrams.txt"
 
 # A placeholder is a lowercase name in braces: {book_title}. JSON like
 # {"number": 1} never matches because of the quotes.

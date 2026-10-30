@@ -41,6 +41,11 @@ in simple language (the user is learning), no paid services, and don't change fi
 - Token budget = LLM_CONTEXT_TOKENS minus a reserve for the answer: 2500 for chunk/merge calls
   (LLM_ANSWER_RESERVE_TOKENS), 4500 for the final call (LLM_FINAL_ANSWER_RESERVE_TOKENS).
 - Fill placeholders by plain string replacement of known names, never `str.format()`.
+- Diagrams (approved 2026-10-17): chunk notes add "## Relationships" and "## Key events" (with chapter
+  numbers); `pipeline/diagrams.py` collects them, asks for JSON via `prompts/4_diagrams.txt`, validates it,
+  and draws the Mermaid itself (character map with coloured lines, top-to-bottom timeline, mindmap,
+  process flowchart), replacing the model's own diagram; on any failure the model's diagram is kept.
+  Those two sections are stripped from the notes sent to the merge and final prompts.
 - Book title and author come from file metadata, falling back to the filename and "Unknown".
 - External AI (approved 2026-10-15): the app owner picks ONE service for the whole app in backend/.env
   (`LLM_PROVIDER` = ollama | openrouter | groq | gemini | anthropic | custom). Ollama stays the default.

@@ -1,0 +1,55 @@
+Book title: {book_title}
+Book type: {book_type}
+Number of chapters: {chapter_count}
+
+Notes collected while reading the book, in order:
+<notes>
+{diagram_notes}
+</notes>
+
+=== CHARACTER MAP ===
+Choose the 8 to 12 most important characters, including family members who
+matter to the story. Then list the relationships between them that the notes
+support, so that each character has at least one. Connect characters to each
+other, not only to the main character.
+
+Each relationship must read as a true sentence from "from" to "to":
+{"from": "Anna", "relation": "aunt of", "to": "Tom"} means "Anna is the aunt of Tom".
+
+Use only facts from the notes. Use exactly the same spelling of a name everywhere.
+Return ONLY valid JSON:
+{
+  "characters": ["Full Name", "Full Name"],
+  "relationships": [
+    {"from": "Full Name", "relation": "short phrase, max 4 words", "to": "Full Name",
+     "type": "family" or "love" or "friend" or "conflict" or "other"}
+  ]
+}
+
+=== PLOT TIMELINE ===
+List the 8 to 10 most important events of the whole story, in the order they
+happen, from the beginning to the end (include the ending).
+
+For "chapter", use the chapter number the notes give for that event. If the
+notes give none, use null. Never guess a chapter number.
+
+Use only facts from the notes.
+Return ONLY valid JSON:
+{"events": [{"chapter": 12, "event": "short description, max 12 words"}]}
+
+=== CONCEPT MAP ===
+Build a map of the book's ideas: the core idea in the middle, the 5 to 8 key
+concepts around it, and for each concept up to 3 sub-ideas that explain it or
+belong to it.
+
+Use only facts from the notes.
+Return ONLY valid JSON:
+{"core": "max 5 words", "concepts": [{"name": "max 5 words", "details": ["max 6 words"]}]}
+
+=== PROCESS ===
+If the book teaches a process or workflow, list its steps in order (4 to 8
+steps). If it teaches no process, return an empty list.
+
+Use only facts from the notes.
+Return ONLY valid JSON:
+{"steps": ["max 8 words"], "repeats": true or false}

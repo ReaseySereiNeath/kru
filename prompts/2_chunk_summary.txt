@@ -31,6 +31,18 @@ Name - one-line description. (Skip if none.)
 ## Visual (optional)
 Only if it clearly helps (a process, structure, or relationship).
 
+## Relationships
+FICTION only (skip for LEARNING). One line per relationship between characters
+that this chunk shows or reveals. Write each line so it reads as a true
+sentence from left to right: Person - relation - Person.
+Example: "Anna - aunt of - Tom" means Anna is Tom's aunt. (Skip if none.)
+
+## Key events
+One line per important event, in order. Start each line with the chapter
+number where it happens, as a number: "12: Tom leaves home". If you can't see
+the chapter number, start with "?". LEARNING: list the steps of any process
+or workflow taught here instead. (Skip if none.)
+
 ## Carryover
 Under 80 words: what the next chunk needs to know (open plot threads, where
 main characters are now, or concepts later chapters build on).
